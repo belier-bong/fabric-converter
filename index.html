@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="원단 계산기">
+<meta name="theme-color" content="#E08830">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<title>원단 계산기</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+    background: #f2f2f7;
+    color: #1c1c1e;
+    min-height: 100%;
+    padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom) 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .header {
+    text-align: center;
+    padding: 20px 0 16px;
+  }
+  .header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .header p {
+    font-size: 13px;
+    color: #8e8e93;
+    margin-top: 2px;
+  }
+
+  .card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 0.5px 1px rgba(0,0,0,0.05);
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #8e8e93;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 14px;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .row + .arrow { margin: 6px 0; }
+  .row + .row { margin-top: 10px; }
+
+  .unit-label {
+    width: 40px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #6e6e73;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .unit-suffix {
+    font-size: 11px;
+    color: #aeaeb2;
+    flex-shrink: 0;
+    width: 28px;
+  }
+
+  input[type="number"], input[type="text"] {
+    flex: 1;
+    padding: 11px 14px;
+    border: 1.5px solid #e5e5ea;
+    border-radius: 10px;
+    font-size: 17px;
+    font-weight: 500;
+    font-family: 'SF Mono', ui-monospace, monospace;
+    background: #f9f9f9;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+    -webkit-appearance: none;
+    min-width: 0;
+  }
+  input:focus {
+    border-color: #E08830;
+    background: #fff;
+  }
+
+  .arrow {
+    text-align: center;
+    color: #d1d1d6;
+    font-size: 14px;
+    padding-left: 50px;
+    margin: 4px 0;
+  }
+
+  /* Shrinkage result */
+  .result-box {
+    text-align: center;
+    padding: 10px;
+    border-radius: 10px;
+    margin-top: 12px;
+    font-size: 18px;
+    font-weight: 700;
+    font-family: 'SF Mono', ui-monospace, monospace;
+    transition: all 0.3s;
+  }
+  .result-box.green { background: #d4edda; color: #1b7a3d; }
+  .result-box.orange { background: #fff3cd; color: #b8860b; }
+  .result-box.red { background: #f8d7da; color: #c0392b; }
+  .result-box.neutral { background: #f0f0f5; color: #6e6e73; }
+
+  .shrink-formula {
+    font-size: 11px;
+    color: #aeaeb2;
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  /* Quick ref */
+  .ref-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .ref-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 7px 10px;
+    background: #f2f2f7;
+    border-radius: 8px;
+    font-size: 12px;
+  }
+  .ref-from { color: #8e8e93; }
+  .ref-to { font-weight: 600; color: #1c1c1e; }
+
+  /* Clear button */
+  .clear-btn {
+    display: block;
+    margin: 8px auto 30px;
+    padding: 10px 24px;
+    border: 1.5px solid #e5e5ea;
+    border-radius: 10px;
+    background: #fff;
+    font-size: 14px;
+    color: #8e8e93;
+    cursor: pointer;
+    -webkit-appearance: none;
+  }
+  .clear-btn:active { background: #f2f2f7; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>원단 계산기</h1>
+  <p>단위 변환 · 수축률</p>
+</div>
+
+<!-- Length Converter -->
+<div class="card">
+  <div class="card-title">길이 변환</div>
+  <div class="row">
+    <span class="unit-label">cm</span>
+    <input type="number" id="cm" inputmode="decimal" placeholder="0">
+  </div>
+  <div class="arrow">↕</div>
+  <div class="row">
+    <span class="unit-label">inch</span>
+    <input type="number" id="inch" inputmode="decimal" placeholder="0">
+  </div>
+  <div class="arrow">↕</div>
+  <div class="row">
+    <span class="unit-label">yard</span>
+    <input type="number" id="yard" inputmode="decimal" placeholder="0">
+  </div>
+  <div class="arrow">↕</div>
+  <div class="row">
+    <span class="unit-label">m</span>
+    <input type="number" id="meter" inputmode="decimal" placeholder="0">
+  </div>
+</div>
+
+<!-- Shrinkage Calculator -->
+<div class="card">
+  <div class="card-title">수축률 계산</div>
+  <div class="row">
+    <span class="unit-label" style="width:52px; font-size:13px;">세탁 전</span>
+    <input type="number" id="before" inputmode="decimal" placeholder="예: 30">
+    <span class="unit-suffix">cm</span>
+  </div>
+  <div class="row" style="margin-top:10px;">
+    <span class="unit-label" style="width:52px; font-size:13px;">세탁 후</span>
+    <input type="number" id="after" inputmode="decimal" placeholder="예: 29">
+    <span class="unit-suffix">cm</span>
+  </div>
+  <div id="shrinkResult" class="result-box neutral" style="display:none;"></div>
+  <div class="shrink-formula">수축률 = (세탁 전 - 세탁 후) ÷ 세탁 전 × 100</div>
+</div>
+
+<!-- Quick Reference -->
+<div class="card">
+  <div class="card-title">빠른 참고</div>
+  <div class="ref-grid">
+    <div class="ref-item"><span class="ref-from">1 inch</span><span class="ref-to">2.54 cm</span></div>
+    <div class="ref-item"><span class="ref-from">1 yard</span><span class="ref-to">91.44 cm</span></div>
+    <div class="ref-item"><span class="ref-from">1 yard</span><span class="ref-to">0.9144 m</span></div>
+    <div class="ref-item"><span class="ref-from">1 m</span><span class="ref-to">1.094 yard</span></div>
+    <div class="ref-item"><span class="ref-from">1 yard</span><span class="ref-to">36 inch</span></div>
+    <div class="ref-item"><span class="ref-from">1 m</span><span class="ref-to">39.37 inch</span></div>
+  </div>
+</div>
+
+<button class="clear-btn" onclick="clearAll()">모두 지우기</button>
+
+<script>
+const CM_PER_INCH = 2.54;
+const CM_PER_YARD = 91.44;
+const M_PER_YARD = 0.9144;
+
+const $ = id => document.getElementById(id);
+
+function round4(v) {
+  return Math.round(v * 10000) / 10000;
+}
+
+function fmt(v) {
+  if (!v && v !== 0) return '';
+  const r = round4(v);
+  if (r === 0) return '';
+  const s = r.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
+  return s;
+}
+
+let activeInput = null;
+
+function updateLength(source) {
+  if (activeInput && activeInput !== source) return;
+  activeInput = source;
+  const v = parseFloat($(source).value);
+  if (isNaN(v) || $(source).value === '') {
+    ['cm','inch','yard','meter'].forEach(id => { if (id !== source) $(id).value = ''; });
+    activeInput = null;
+    return;
+  }
+  const fields = { cm: 0, inch: 0, yard: 0, meter: 0 };
+  switch(source) {
+    case 'cm':
+      fields.inch = v / CM_PER_INCH;
+      fields.yard = v / CM_PER_YARD;
+      fields.meter = v / 100;
+      break;
+    case 'inch':
+      fields.cm = v * CM_PER_INCH;
+      fields.yard = v / 36;
+      fields.meter = v * CM_PER_INCH / 100;
+      break;
+    case 'yard':
+      fields.cm = v * CM_PER_YARD;
+      fields.inch = v * 36;
+      fields.meter = v * M_PER_YARD;
+      break;
+    case 'meter':
+      fields.cm = v * 100;
+      fields.inch = v * 100 / CM_PER_INCH;
+      fields.yard = v / M_PER_YARD;
+      break;
+  }
+  Object.keys(fields).forEach(id => {
+    if (id !== source) $(id).value = fmt(fields[id]);
+  });
+  activeInput = null;
+}
+
+['cm','inch','yard','meter'].forEach(id => {
+  $(id).addEventListener('input', () => updateLength(id));
+});
+
+function calcShrinkage() {
+  const b = parseFloat($('before').value);
+  const a = parseFloat($('after').value);
+  const box = $('shrinkResult');
+  if (isNaN(b) || isNaN(a) || b <= 0) {
+    box.style.display = 'none';
+    return;
+  }
+  const rate = (b - a) / b * 100;
+  const rounded = Math.round(rate * 100) / 100;
+  box.style.display = 'block';
+
+  let label, cls;
+  if (rounded > 0) {
+    label = '수축률: ' + rounded.toFixed(rounded === Math.round(rounded) ? 0 : 2) + '%';
+  } else if (rounded < 0) {
+    label = '신장률: ' + Math.abs(rounded).toFixed(Math.abs(rounded) === Math.round(Math.abs(rounded)) ? 0 : 2) + '%';
+  } else {
+    label = '변화 없음 (0%)';
+  }
+
+  const absR = Math.abs(rounded);
+  if (absR === 0) cls = 'neutral';
+  else if (absR <= 3) cls = 'green';
+  else if (absR <= 5) cls = 'orange';
+  else cls = 'red';
+
+  box.className = 'result-box ' + cls;
+  box.textContent = label;
+}
+
+$('before').addEventListener('input', calcShrinkage);
+$('after').addEventListener('input', calcShrinkage);
+
+function clearAll() {
+  ['cm','inch','yard','meter','before','after'].forEach(id => $(id).value = '');
+  $('shrinkResult').style.display = 'none';
+}
+</script>
+
+</body>
+</html>
