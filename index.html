@@ -223,6 +223,11 @@
 <button class="clear-btn" onclick="clearAll()">모두 지우기</button>
 
 <script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+</script>
+<script>
 const CM_PER_INCH = 2.54;
 const CM_PER_YARD = 91.44;
 const M_PER_YARD = 0.9144;
