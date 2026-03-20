@@ -163,7 +163,7 @@
 
 <div class="header">
   <h1>원단 계산기</h1>
-  <p>단위 변환 · 수축률</p>
+  <p>단위 변환 · 중량 변환 · 수축률</p>
 </div>
 
 <!-- Length Converter -->
@@ -188,6 +188,57 @@
     <span class="unit-label">m</span>
     <input type="number" id="meter" inputmode="decimal" placeholder="0">
   </div>
+</div>
+
+<!-- Area Weight Converter -->
+<div class="card">
+  <div class="card-title">면적 중량 변환</div>
+  <div class="row">
+    <span class="unit-label">gsm</span>
+    <input type="number" id="gsm" inputmode="decimal" placeholder="0">
+    <span class="unit-suffix" style="width:36px">g/m²</span>
+  </div>
+  <div class="arrow">↕</div>
+  <div class="row">
+    <span class="unit-label">oz</span>
+    <input type="number" id="ozyd" inputmode="decimal" placeholder="0">
+    <span class="unit-suffix" style="width:36px">oz/yd²</span>
+  </div>
+</div>
+
+<!-- Linear Weight Calculator -->
+<div class="card">
+  <div class="card-title">선형 중량 (야드/미터당 무게)</div>
+  <div class="row">
+    <span class="unit-label" style="width:52px; font-size:13px;">gsm</span>
+    <input type="number" id="lin-gsm" inputmode="decimal" placeholder="예: 180">
+    <span class="unit-suffix" style="width:36px">g/m²</span>
+  </div>
+  <div class="row" style="margin-top:10px;">
+    <span class="unit-label" style="width:52px; font-size:13px;">원단폭</span>
+    <input type="number" id="lin-width" inputmode="decimal" placeholder="예: 150">
+    <span class="unit-suffix">cm</span>
+  </div>
+  <div id="linResult" style="display:none; margin-top:12px;">
+    <div style="display:flex; gap:8px;">
+      <div style="flex:1; text-align:center; padding:10px; background:#f0f0f5; border-radius:10px;">
+        <div style="font-size:11px; color:#8e8e93; margin-bottom:4px;">미터당</div>
+        <div id="linGM" style="font-size:17px; font-weight:700; font-family:'SF Mono',monospace;">—</div>
+        <div style="font-size:11px; color:#aeaeb2;">g/m</div>
+      </div>
+      <div style="flex:1; text-align:center; padding:10px; background:#f0f0f5; border-radius:10px;">
+        <div style="font-size:11px; color:#8e8e93; margin-bottom:4px;">야드당</div>
+        <div id="linGY" style="font-size:17px; font-weight:700; font-family:'SF Mono',monospace;">—</div>
+        <div style="font-size:11px; color:#aeaeb2;">g/yd</div>
+      </div>
+      <div style="flex:1; text-align:center; padding:10px; background:#f0f0f5; border-radius:10px;">
+        <div style="font-size:11px; color:#8e8e93; margin-bottom:4px;">야드당</div>
+        <div id="linOY" style="font-size:17px; font-weight:700; font-family:'SF Mono',monospace;">—</div>
+        <div style="font-size:11px; color:#aeaeb2;">oz/yd</div>
+      </div>
+    </div>
+  </div>
+  <div class="shrink-formula" style="margin-top:10px;">g/m = gsm × 폭(m) · g/yd = g/m × 0.9144</div>
 </div>
 
 <!-- Shrinkage Calculator -->
@@ -217,6 +268,8 @@
     <div class="ref-item"><span class="ref-from">1 m</span><span class="ref-to">1.094 yard</span></div>
     <div class="ref-item"><span class="ref-from">1 yard</span><span class="ref-to">36 inch</span></div>
     <div class="ref-item"><span class="ref-from">1 m</span><span class="ref-to">39.37 inch</span></div>
+    <div class="ref-item"><span class="ref-from">1 oz/yd²</span><span class="ref-to">33.91 gsm</span></div>
+    <div class="ref-item"><span class="ref-from">180 gsm</span><span class="ref-to">5.31 oz</span></div>
   </div>
 </div>
 
@@ -324,9 +377,60 @@ function calcShrinkage() {
 $('before').addEventListener('input', calcShrinkage);
 $('after').addEventListener('input', calcShrinkage);
 
+// Area weight: gsm <-> oz/yd²
+const GSM_PER_OZ = 33.906;
+let weightActive = null;
+
+function updateWeight(source) {
+  if (weightActive && weightActive !== source) return;
+  weightActive = source;
+  const v = parseFloat($(source).value);
+  if (isNaN(v) || $(source).value === '') {
+    if (source !== 'gsm') $('gsm').value = '';
+    if (source !== 'ozyd') $('ozyd').value = '';
+    weightActive = null;
+    return;
+  }
+  if (source === 'gsm') {
+    $('ozyd').value = fmt(v / GSM_PER_OZ);
+  } else {
+    $('gsm').value = fmt(v * GSM_PER_OZ);
+  }
+  weightActive = null;
+}
+
+$('gsm').addEventListener('input', () => updateWeight('gsm'));
+$('ozyd').addEventListener('input', () => updateWeight('ozyd'));
+
+// Linear weight
+function calcLinear() {
+  const gsm = parseFloat($('lin-gsm').value);
+  const widthCm = parseFloat($('lin-width').value);
+  const box = $('linResult');
+  if (isNaN(gsm) || isNaN(widthCm) || gsm <= 0 || widthCm <= 0) {
+    box.style.display = 'none';
+    return;
+  }
+  box.style.display = 'block';
+  const widthM = widthCm / 100;
+  const gPerM = gsm * widthM;
+  const gPerYd = gPerM * 0.9144;
+  const ozPerYd = gPerYd / 28.3495;
+  $('linGM').textContent = fmt(gPerM);
+  $('linGY').textContent = fmt(gPerYd);
+  $('linOY').textContent = fmt(ozPerYd);
+}
+
+$('lin-gsm').addEventListener('input', calcLinear);
+$('lin-width').addEventListener('input', calcLinear);
+
 function clearAll() {
-  ['cm','inch','yard','meter','before','after'].forEach(id => $(id).value = '');
+  ['cm','inch','yard','meter','before','after','gsm','ozyd','lin-gsm','lin-width'].forEach(id => $(id).value = '');
   $('shrinkResult').style.display = 'none';
+  $('linResult').style.display = 'none';
+  $('linGM').textContent = '—';
+  $('linGY').textContent = '—';
+  $('linOY').textContent = '—';
 }
 </script>
 
