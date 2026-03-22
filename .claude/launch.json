@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "fabric-calc",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8096"],
+      "port": 8096
+    }
+  ]
+}
