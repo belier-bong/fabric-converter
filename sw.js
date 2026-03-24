@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fabric-calc-v3';
+const CACHE_NAME = 'fabric-calc-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ const ASSETS = [
   './icon-512.png'
 ];
 
+// 설치: 모든 파일을 캐시에 저장
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME)
@@ -16,6 +17,7 @@ self.addEventListener('install', e => {
   );
 });
 
+// 활성화: 이전 버전 캐시 삭제
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -24,14 +26,17 @@ self.addEventListener('activate', e => {
   );
 });
 
+// 요청: 캐시에서만 서빙. 네트워크 안 씀.
 self.addEventListener('fetch', e => {
   e.respondWith(
-    fetch(e.request)
-      .then(response => {
+    caches.match(e.request).then(cached => {
+      if (cached) return cached;
+      // 캐시에 없는 경우만 네트워크 (최초 설치 시)
+      return fetch(e.request).then(response => {
         const clone = response.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
         return response;
-      })
-      .catch(() => caches.match(e.request))
+      });
+    })
   );
 });
