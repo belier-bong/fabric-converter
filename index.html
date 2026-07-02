@@ -428,6 +428,13 @@
 <script>
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js');
+  // 새 버전 서비스 워커가 넘겨받으면 자동 새로고침 (한 번만)
+  let refreshed = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshed) return;
+    refreshed = true;
+    window.location.reload();
+  });
 }
 </script>
 <script>

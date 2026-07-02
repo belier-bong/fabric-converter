@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fabric-calc-v7';
+const CACHE_NAME = 'fabric-calc-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -8,11 +8,11 @@ const ASSETS = [
   './icon-512.png'
 ];
 
-// 설치: 모든 파일을 캐시에 저장
+// 설치: 모든 파일을 캐시에 저장 (HTTP 캐시 우회 - 항상 서버에서 최신 파일)
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(ASSETS))
+      .then(cache => cache.addAll(ASSETS.map(u => new Request(u, { cache: 'no-cache' }))))
       .then(() => self.skipWaiting())
   );
 });
