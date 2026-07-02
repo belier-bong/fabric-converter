@@ -153,17 +153,28 @@
   }
   .calc-display {
     background: #f2f2f7;
-    color: #1c1c1e;
+    border-radius: 10px;
+    padding: 10px 14px 12px;
+    margin-bottom: 14px;
+    text-align: right;
+    overflow: hidden;
+  }
+  .calc-expr {
+    font-family: 'SF Mono', ui-monospace, monospace;
+    font-size: 13px;
+    color: #8e8e93;
+    min-height: 18px;
+    white-space: nowrap;
+    overflow: hidden;
+    margin-bottom: 2px;
+  }
+  .calc-num {
     font-family: 'SF Mono', ui-monospace, monospace;
     font-size: 28px;
     font-weight: 600;
-    text-align: right;
-    padding: 12px 14px;
-    border-radius: 10px;
-    margin-bottom: 14px;
-    min-height: 54px;
-    overflow: hidden;
+    color: #1c1c1e;
     white-space: nowrap;
+    overflow: hidden;
     letter-spacing: 0.5px;
   }
   .calc-grid {
@@ -183,9 +194,12 @@
     box-shadow: 0 1px 2px rgba(0,0,0,0.06);
     cursor: pointer;
     -webkit-appearance: none;
-    transition: transform 0.05s, background 0.15s;
+    transition: transform 0.08s, background 0.08s;
   }
-  .calc-btn:active { transform: translateY(1px); background: #e5e5ea; }
+  .calc-btn:active, .calc-btn.pressed {
+    transform: scale(0.92);
+    background: #d9d9de;
+  }
   .calc-btn.op { color: #E08830; font-weight: 600; }
   .calc-btn.green { color: #1b7a3d; font-weight: 600; }
   .calc-btn.yellow {
@@ -193,7 +207,10 @@
     color: #fff;
     font-weight: 700;
   }
-  .calc-btn.yellow:active { background: #c9761f; }
+  .calc-btn.yellow:active, .calc-btn.yellow.pressed {
+    transform: scale(0.92);
+    background: #b96a1a;
+  }
   .calc-btn.zero {
     aspect-ratio: auto;
     grid-column: span 2;
@@ -226,7 +243,11 @@
     cursor: pointer;
     -webkit-appearance: none;
   }
-  .send-chip:active { background: #ffe3c7; color: #E08830; }
+  .send-chip:active, .send-chip.pressed {
+    background: #ffe3c7;
+    color: #E08830;
+    transform: scale(0.95);
+  }
 
   input.flash {
     border-color: #E08830 !important;
@@ -259,7 +280,10 @@
 <!-- Calculator -->
 <div class="calc-body">
   <div class="card-title">계산기</div>
-  <div class="calc-display" id="calcDisplay">0</div>
+  <div class="calc-display">
+    <div class="calc-expr" id="calcExpr">&nbsp;</div>
+    <div class="calc-num" id="calcDisplay">0</div>
+  </div>
   <div class="calc-grid">
     <button class="calc-btn green" data-key="C">C</button>
     <button class="calc-btn op" data-key="±">±</button>
@@ -550,8 +574,8 @@ function calcLinear() {
 $('lin-gsm').addEventListener('input', calcLinear);
 $('lin-width').addEventListener('input', calcLinear);
 
-// Calculator (Braun ET66 style)
-let calc = { display: '0', acc: null, op: null, fresh: true };
+// Calculator
+let calc = { display: '0', acc: null, op: null, fresh: true, expr: '' };
 
 function calcFmt(n) {
   if (!isFinite(n)) return 'Error';
@@ -572,15 +596,17 @@ function applyOp(a, b, op) {
 
 function pressKey(key) {
   const s = calc;
+  const justEq = s.expr.endsWith('=');
   if (key >= '0' && key <= '9') {
     if (!s.fresh && s.display.replace(/[-.]/g, '').length >= 10) return;
     const d = s.fresh || s.display === '0' ? key : s.display + key;
-    calc = { ...s, display: d, fresh: false };
+    calc = { ...s, display: d, fresh: false, expr: justEq ? '' : s.expr };
   } else if (key === '.') {
-    if (s.fresh) calc = { ...s, display: '0.', fresh: false };
-    else if (!s.display.includes('.')) calc = { ...s, display: s.display + '.', fresh: false };
+    const base = justEq ? { ...s, expr: '' } : s;
+    if (base.fresh) calc = { ...base, display: '0.', fresh: false };
+    else if (!base.display.includes('.')) calc = { ...base, display: base.display + '.', fresh: false };
   } else if (key === 'C') {
-    calc = { display: '0', acc: null, op: null, fresh: true };
+    calc = { display: '0', acc: null, op: null, fresh: true, expr: '' };
   } else if (key === '±') {
     const flipped = s.display.startsWith('-') ? s.display.slice(1) : '-' + s.display;
     calc = { ...s, display: s.display === '0' ? '0' : flipped };
@@ -588,25 +614,38 @@ function pressKey(key) {
     calc = { ...s, display: calcFmt(parseFloat(s.display) / 100), fresh: true };
   } else if (key === '+' || key === '−' || key === '×' || key === '÷') {
     const v = parseFloat(s.display);
-    if (s.op !== null && s.acc !== null && !s.fresh) {
+    if (s.op !== null && s.fresh) {
+      calc = { ...s, op: key, expr: s.expr.replace(/[+−×÷]$/, '') + key };
+    } else if (s.op !== null && s.acc !== null) {
       const r = applyOp(s.acc, v, s.op);
-      calc = { display: calcFmt(r), acc: r, op: key, fresh: true };
+      calc = { display: calcFmt(r), acc: r, op: key, fresh: true, expr: s.expr + ' ' + s.display + ' ' + key };
     } else {
-      calc = { ...s, acc: v, op: key, fresh: true };
+      calc = { ...s, acc: v, op: key, fresh: true, expr: s.display + ' ' + key };
     }
   } else if (key === '=') {
     if (s.op !== null && s.acc !== null) {
       const r = applyOp(s.acc, parseFloat(s.display), s.op);
-      calc = { display: calcFmt(r), acc: null, op: null, fresh: true };
+      calc = { display: calcFmt(r), acc: null, op: null, fresh: true, expr: s.expr + ' ' + s.display + ' =' };
     }
   }
   const box = $('calcDisplay');
   box.textContent = calc.display;
   box.style.fontSize = calc.display.length > 9 ? '21px' : '28px';
+  const exprBox = $('calcExpr');
+  exprBox.textContent = calc.expr || ' ';
+  exprBox.scrollLeft = exprBox.scrollWidth;
 }
 
 document.querySelectorAll('.calc-btn').forEach(btn => {
   btn.addEventListener('click', () => pressKey(btn.dataset.key));
+});
+
+// Pressed visual feedback (touch + mouse)
+document.querySelectorAll('.calc-btn, .send-chip').forEach(btn => {
+  btn.addEventListener('pointerdown', () => btn.classList.add('pressed'));
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev =>
+    btn.addEventListener(ev, () => setTimeout(() => btn.classList.remove('pressed'), 100))
+  );
 });
 
 // Send calculator result into a converter field

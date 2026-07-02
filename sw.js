@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fabric-calc-v6';
+const CACHE_NAME = 'fabric-calc-v7';
 const ASSETS = [
   './',
   './index.html',
