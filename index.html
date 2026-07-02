@@ -143,6 +143,96 @@
   .ref-from { color: #8e8e93; }
   .ref-to { font-weight: 600; color: #1c1c1e; }
 
+  /* Calculator */
+  .calc-body {
+    background: #fff;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 0.5px 1px rgba(0,0,0,0.05);
+  }
+  .calc-display {
+    background: #f2f2f7;
+    color: #1c1c1e;
+    font-family: 'SF Mono', ui-monospace, monospace;
+    font-size: 28px;
+    font-weight: 600;
+    text-align: right;
+    padding: 12px 14px;
+    border-radius: 10px;
+    margin-bottom: 14px;
+    min-height: 54px;
+    overflow: hidden;
+    white-space: nowrap;
+    letter-spacing: 0.5px;
+  }
+  .calc-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  .calc-btn {
+    aspect-ratio: 1;
+    border: none;
+    border-radius: 50%;
+    font-family: inherit;
+    font-size: 19px;
+    font-weight: 500;
+    color: #1c1c1e;
+    background: #f2f2f7;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    cursor: pointer;
+    -webkit-appearance: none;
+    transition: transform 0.05s, background 0.15s;
+  }
+  .calc-btn:active { transform: translateY(1px); background: #e5e5ea; }
+  .calc-btn.op { color: #E08830; font-weight: 600; }
+  .calc-btn.green { color: #1b7a3d; font-weight: 600; }
+  .calc-btn.yellow {
+    background: #E08830;
+    color: #fff;
+    font-weight: 700;
+  }
+  .calc-btn.yellow:active { background: #c9761f; }
+  .calc-btn.zero {
+    aspect-ratio: auto;
+    grid-column: span 2;
+    border-radius: 999px;
+    text-align: left;
+    padding-left: 24%;
+  }
+
+  /* Send result to converters */
+  .calc-send {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 14px;
+  }
+  .calc-send-label {
+    font-size: 11px;
+    color: #8e8e93;
+    margin-right: 2px;
+  }
+  .send-chip {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 999px;
+    background: #f2f2f7;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6e6e73;
+    cursor: pointer;
+    -webkit-appearance: none;
+  }
+  .send-chip:active { background: #ffe3c7; color: #E08830; }
+
+  input.flash {
+    border-color: #E08830 !important;
+    background: #fff7ef !important;
+  }
+
   /* Clear button */
   .clear-btn {
     display: block;
@@ -163,7 +253,43 @@
 
 <div class="header">
   <h1>원단 계산기</h1>
-  <p>단위 변환 · 중량 변환 · 수축률</p>
+  <p>계산기 · 단위 변환 · 중량 변환 · 수축률</p>
+</div>
+
+<!-- Calculator -->
+<div class="calc-body">
+  <div class="card-title">계산기</div>
+  <div class="calc-display" id="calcDisplay">0</div>
+  <div class="calc-grid">
+    <button class="calc-btn green" data-key="C">C</button>
+    <button class="calc-btn op" data-key="±">±</button>
+    <button class="calc-btn op" data-key="%">%</button>
+    <button class="calc-btn op" data-key="÷">÷</button>
+    <button class="calc-btn" data-key="7">7</button>
+    <button class="calc-btn" data-key="8">8</button>
+    <button class="calc-btn" data-key="9">9</button>
+    <button class="calc-btn op" data-key="×">×</button>
+    <button class="calc-btn" data-key="4">4</button>
+    <button class="calc-btn" data-key="5">5</button>
+    <button class="calc-btn" data-key="6">6</button>
+    <button class="calc-btn op" data-key="−">−</button>
+    <button class="calc-btn" data-key="1">1</button>
+    <button class="calc-btn" data-key="2">2</button>
+    <button class="calc-btn" data-key="3">3</button>
+    <button class="calc-btn op" data-key="+">+</button>
+    <button class="calc-btn zero" data-key="0">0</button>
+    <button class="calc-btn" data-key=".">·</button>
+    <button class="calc-btn yellow" data-key="=">=</button>
+  </div>
+  <div class="calc-send">
+    <span class="calc-send-label">결과 넣기 →</span>
+    <button class="send-chip" data-target="cm">cm</button>
+    <button class="send-chip" data-target="inch">inch</button>
+    <button class="send-chip" data-target="yard">yard</button>
+    <button class="send-chip" data-target="meter">m</button>
+    <button class="send-chip" data-target="gsm">gsm</button>
+    <button class="send-chip" data-target="ozyd">oz</button>
+  </div>
 </div>
 
 <!-- Length Converter -->
@@ -424,6 +550,78 @@ function calcLinear() {
 $('lin-gsm').addEventListener('input', calcLinear);
 $('lin-width').addEventListener('input', calcLinear);
 
+// Calculator (Braun ET66 style)
+let calc = { display: '0', acc: null, op: null, fresh: true };
+
+function calcFmt(n) {
+  if (!isFinite(n)) return 'Error';
+  let s = String(Math.round(n * 1e9) / 1e9);
+  if (s.replace(/[-.]/g, '').length > 10) s = n.toPrecision(9);
+  if (s.includes('e')) s = n.toExponential(4);
+  return s;
+}
+
+function applyOp(a, b, op) {
+  switch (op) {
+    case '+': return a + b;
+    case '−': return a - b;
+    case '×': return a * b;
+    case '÷': return b === 0 ? NaN : a / b;
+  }
+}
+
+function pressKey(key) {
+  const s = calc;
+  if (key >= '0' && key <= '9') {
+    if (!s.fresh && s.display.replace(/[-.]/g, '').length >= 10) return;
+    const d = s.fresh || s.display === '0' ? key : s.display + key;
+    calc = { ...s, display: d, fresh: false };
+  } else if (key === '.') {
+    if (s.fresh) calc = { ...s, display: '0.', fresh: false };
+    else if (!s.display.includes('.')) calc = { ...s, display: s.display + '.', fresh: false };
+  } else if (key === 'C') {
+    calc = { display: '0', acc: null, op: null, fresh: true };
+  } else if (key === '±') {
+    const flipped = s.display.startsWith('-') ? s.display.slice(1) : '-' + s.display;
+    calc = { ...s, display: s.display === '0' ? '0' : flipped };
+  } else if (key === '%') {
+    calc = { ...s, display: calcFmt(parseFloat(s.display) / 100), fresh: true };
+  } else if (key === '+' || key === '−' || key === '×' || key === '÷') {
+    const v = parseFloat(s.display);
+    if (s.op !== null && s.acc !== null && !s.fresh) {
+      const r = applyOp(s.acc, v, s.op);
+      calc = { display: calcFmt(r), acc: r, op: key, fresh: true };
+    } else {
+      calc = { ...s, acc: v, op: key, fresh: true };
+    }
+  } else if (key === '=') {
+    if (s.op !== null && s.acc !== null) {
+      const r = applyOp(s.acc, parseFloat(s.display), s.op);
+      calc = { display: calcFmt(r), acc: null, op: null, fresh: true };
+    }
+  }
+  const box = $('calcDisplay');
+  box.textContent = calc.display;
+  box.style.fontSize = calc.display.length > 9 ? '21px' : '28px';
+}
+
+document.querySelectorAll('.calc-btn').forEach(btn => {
+  btn.addEventListener('click', () => pressKey(btn.dataset.key));
+});
+
+// Send calculator result into a converter field
+document.querySelectorAll('.send-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    if (isNaN(parseFloat(calc.display))) return;
+    const input = $(chip.dataset.target);
+    input.value = calc.display;
+    input.dispatchEvent(new Event('input'));
+    input.classList.add('flash');
+    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => input.classList.remove('flash'), 900);
+  });
+});
+
 function clearAll() {
   ['cm','inch','yard','meter','before','after','gsm','ozyd','lin-gsm','lin-width'].forEach(id => $(id).value = '');
   $('shrinkResult').style.display = 'none';
@@ -431,6 +629,7 @@ function clearAll() {
   $('linGM').textContent = '—';
   $('linGY').textContent = '—';
   $('linOY').textContent = '—';
+  pressKey('C');
 }
 </script>
 
